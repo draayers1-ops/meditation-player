@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="A calm, offline player for your personal meditation audio.">
+  <title>Meditation</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <style>
+    :root {
+      --bg: #0f172a; --bg2: #1e1b4b; --fg: #e2e8f0; --muted: #94a3b8;
+      --teal: #5eead4; --lav: #a58cff; --track: rgba(226,232,240,.15);
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      background: radial-gradient(120% 90% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg);
+      color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+      user-select: none;
+    }
+    main { width: 100%; max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 28px; text-align: center; }
+    h1 { font-weight: 300; letter-spacing: .12em; text-transform: uppercase; font-size: 1.05rem; color: var(--muted); margin: 0; }
+    .hidden { display: none !important; }
+    .orb {
+      width: 220px; height: 220px; border-radius: 50%;
+      background: linear-gradient(180deg, var(--teal), var(--lav));
+      box-shadow: 0 0 60px rgba(129,140,248,.35);
+      display: grid; place-items: center; position: relative; border: 0; cursor: pointer; color: #0f172a;
+      transition: transform .3s ease;
+    }
+    .orb:active { transform: scale(.97); }
+    .orb.playing { animation: breathe 8s ease-in-out infinite; }
+    @keyframes breathe { 0%,100% { transform: scale(1); box-shadow: 0 0 50px rgba(129,140,248,.3); } 50% { transform: scale(1.06); box-shadow: 0 0 90px rgba(94,234,212,.45); } }
+    @media (prefers-reduced-motion: reduce) { .orb.playing { animation: none; } }
+    .orb svg { width: 72px; height: 72px; fill: #0f172a; opacity: .85; }
+    .title { font-size: .95rem; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 0; }
+    .progress { width: 100%; }
+    input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 28px; background: transparent; margin: 0; }
+    input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--teal) var(--p,0%), var(--track) var(--p,0%)); }
+    input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--fg); margin-top: -7px; }
+    input[type=range]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--track); }
+    input[type=range]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--teal); }
+    input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: 0; border-radius: 50%; background: var(--fg); }
+    .times { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; color: var(--muted); font-size: .85rem; margin-top: 4px; }
+    .skips { display: flex; gap: 40px; }
+    .skip { background: none; border: 1px solid var(--track); color: var(--fg); border-radius: 999px; padding: 10px 18px; font-size: .9rem; cursor: pointer; }
+    .btn {
+      background: linear-gradient(180deg, var(--teal), var(--lav)); color: #0f172a; border: 0; border-radius: 999px;
+      padding: 18px 28px; font-size: 1.1rem; font-weight: 600; cursor: pointer; box-shadow: 0 8px 30px rgba(129,140,248,.3);
+    }
+    .link { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: .85rem; cursor: pointer; padding: 8px; }
+    .note { color: var(--muted); font-size: .85rem; line-height: 1.5; margin: 0; }
+    .status { color: var(--teal); font-size: .9rem; min-height: 1.2em; margin: 0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Meditation</h1>
+
+    <!-- First run / choose file -->
+    <section id="setup" class="hidden" aria-label="Choose file">
+      <div style="display:flex;flex-direction:column;gap:20px;align-items:center">
+        <p class="note">Pick your meditation audio from this phone. It is saved privately inside this app on your device and never uploaded anywhere.</p>
+        <button id="chooseBtn" class="btn" type="button">Choose your meditation file</button>
+        <p id="setupStatus" class="status" role="status"></p>
+        <button id="cancelChange" class="link hidden" type="button">Cancel</button>
+      </div>
+    </section>
+
+    <!-- Player -->
+    <section id="player" class="hidden" aria-label="Player" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:28px">
+      <button id="playBtn" class="orb" type="button" aria-label="Play">
+        <svg id="iconPlay" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.2-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+        <svg id="iconPause" class="hidden" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg>
+      </button>
+      <p id="trackTitle" class="title"></p>
+      <div class="progress">
+        <input id="seek" type="range" min="0" max="0" step="1" value="0" aria-label="Seek">
+        <div class="times"><span id="elapsed">0:00</span><span id="remaining">-0:00</span></div>
+      </div>
+      <div class="skips">
+        <button id="back15" class="skip" type="button" aria-label="Back 15 seconds">&#8634; 15s</button>
+        <button id="fwd15" class="skip" type="button" aria-label="Forward 15 seconds">15s &#8635;</button>
+      </div>
+      <button id="changeBtn" class="link" type="button">Change file</button>
+    </section>
+
+    <input id="fileInput" type="file" accept="audio/*" class="hidden">
+    <audio id="audio" preload="auto"></audio>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
